@@ -2,7 +2,10 @@
 @attribute [Authorize]
 
 @using Chinook.Models
+@using Chinook.Services
 @using Microsoft.EntityFrameworkCore
+
+@inject IArtistService ArtistService
 
 <PageTitle>Index</PageTitle>
 
@@ -14,6 +17,8 @@
 }
 else
 {
+    @* <input type="text" @bind="SearchQuery" placeholder="Search artist by name" class="form-control mb-2" @oninput="SearchArtists" /> *@
+    <input type="text" @bind="SearchQuery" placeholder="Search artist by name" class="form-control mb-2" @oninput="SearchArtists" />
     <table class="table table-striped table-hover table-sm">
         <thead>
             <tr>
@@ -22,7 +27,7 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var artist in Artists)
+            @foreach (var artist in FilteredArtists)
             {
                 <tr>
                     <td><a href="Artist/@artist.ArtistId">@artist.Name</a></td>
@@ -35,24 +40,45 @@ else
 
 @code {
     private List<Artist> Artists;
-    [Inject] IDbContextFactory<ChinookContext> DbFactory { get; set; }
+    private string SearchQuery { get; set; }
+    private List<Artist> FilteredArtists { get; set; }
+    // private System.Timers.Timer debounceTimer;
 
-    protected override async Task OnInitializedAsync() {
-        await InvokeAsync(StateHasChanged);
-        Artists = await GetArtists();
-    }
-
-    public async Task<List<Artist>> GetArtists()
-    {   
-        var dbContext = await DbFactory.CreateDbContextAsync();
-        var users = dbContext.Users.Include(a => a.UserPlaylists).ToList();
-        
-        return dbContext.Artists.ToList();
-    }
-
-    public async Task<List<Album>> GetAlbumsForArtist(int artistId)
+    protected override async Task OnInitializedAsync()
     {
-        var dbContext = await DbFactory.CreateDbContextAsync();
-        return dbContext.Albums.Where(a => a.ArtistId == artistId).ToList();
+        Artists = await ArtistService.GetArtistsAsync();
+        FilteredArtists = Artists;
+        // debounceTimer = new Timer(500); // 500 milliseconds debounce time
+        // debounceTimer.Elapsed += async (sender, e) => await SearchArtists();
+    }
+
+    public async Task<List<Album>> GetAlbumsForArtistByArtistId(int artistId)
+    {
+        return await ArtistService.GetAlbumsForArtistByArtistIdAsync(artistId);
+    }
+
+    // private void DebouncedSearch()
+    // {
+    //     // Dispose of existing timer if it exists
+    //     if (debounceTimer != null)
+    //     {
+    //         debounceTimer.Dispose();
+    //     }
+
+    //     // Create a new timer with a 500ms interval
+    //     debounceTimer = new System.Timers.Timer(500);
+    //     debounceTimer.AutoReset = false; // Set to false to make it one-time
+    //     debounceTimer.Elapsed += async (sender, e) =>
+    //     {
+    //         await SearchArtists(); // Trigger the search
+    //         debounceTimer.Dispose(); // Dispose of the timer
+    //     };
+    //     debounceTimer.Start();
+    // }
+
+    private async Task SearchArtists()
+    {
+        FilteredArtists = string.IsNullOrWhiteSpace(SearchQuery) ? Artists : await ArtistService.SearchArtistsByNameAsync(SearchQuery);
+        StateHasChanged();
     }
 }
