@@ -1,0 +1,37 @@
+﻿@using Chinook.ClientModels
+@if (IsFavorite)
+{
+    <a href="#" class="m-1" title="Unmark as favorite" @onclick="@UnfavoriteTrack" @onclick:preventDefault><i class="bi bi-star-fill"></i></a>
+}
+else
+{
+    <a href="#" class="m-1" title="Mark as favorite" @onclick="@FavoriteTrack" @onclick:preventDefault><i class="bi bi-star"></i></a>
+}
+
+@code {
+    [Parameter] public List<PlaylistTrack> Tracks { get; set; }
+    [Parameter] public long TrackId { get; set; }
+    [Parameter] public EventCallback<string> InfoMessageChanged { get; set; }
+
+    private bool IsFavorite => Tracks.FirstOrDefault(t => t.TrackId == TrackId)?.IsFavorite ?? false;
+
+    private async Task FavoriteTrack()
+    {
+        var track = Tracks.FirstOrDefault(t => t.TrackId == TrackId);
+        if (track != null)
+        {
+            track.IsFavorite = true;
+            await InfoMessageChanged.InvokeAsync($"Track {track.ArtistName} - {track.AlbumTitle} - {track.TrackName} added to playlist Favorites.");
+        }
+    }
+
+    private async Task UnfavoriteTrack()
+    {
+        var track = Tracks.FirstOrDefault(t => t.TrackId == TrackId);
+        if (track != null)
+        {
+            track.IsFavorite = false;
+            await InfoMessageChanged.InvokeAsync($"Track {track.ArtistName} - {track.AlbumTitle} - {track.TrackName} removed from playlist Favorites.");
+        }
+    }
+}
